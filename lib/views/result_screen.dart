@@ -1,8 +1,11 @@
 // views/result_screen.dart
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:promoten/views/project_input_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../controllers/project_controller.dart';
 import '../controllers/question_controller.dart';
 import '../services/api_service.dart';
@@ -17,6 +20,18 @@ class ResultScreen extends StatefulWidget {
 
 class _ResultScreenState extends State<ResultScreen>
     with TickerProviderStateMixin {
+  Future<void> saveLatestProject() async {
+    final prefs = await SharedPreferences.getInstance();
+    final project = {
+      'title': projectController.titleController.text,
+      'description': projectController.descriptionController.text,
+      'platforms': platformContent,
+    };
+    // await prefs.setString('latestProject', project.toString());
+
+    await prefs.setString('latestProject', jsonEncode(project));
+  }
+
   DateTime? lastBackPressTime;
   final projectController = Get.find<ProjectController>();
   final questionController = Get.find<QuestionController>();
@@ -30,7 +45,33 @@ class _ResultScreenState extends State<ResultScreen>
   void initState() {
     super.initState();
     _setupAnimations();
-    _startStreaming();
+    _restoreOrGenerate();
+  }
+
+  void _restoreOrGenerate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('latestProject');
+
+    if (saved != null) {
+      // Load from storage
+      final Map<String, dynamic> project = Map<String, dynamic>.from(
+        jsonDecode(saved),
+      );
+
+      // Restore into platformContent
+      final restoredContent = Map<String, String>.from(project['platforms']);
+      platformContent.assignAll(restoredContent);
+
+      // Restore title/desc into controllers
+      projectController.titleController.text = project['title'];
+      projectController.descriptionController.text = project['description'];
+
+      isGenerating.value = false;
+      _pulseController.stop();
+    } else {
+      // If nothing saved, run normal generation
+      _startStreaming();
+    }
   }
 
   void _setupAnimations() {
@@ -74,6 +115,7 @@ class _ResultScreenState extends State<ResultScreen>
 
     isGenerating.value = false;
     _pulseController.stop();
+    await saveLatestProject();
   }
 
   void _regenerateContent() {
@@ -109,8 +151,12 @@ class _ResultScreenState extends State<ResultScreen>
             borderRadius: 12,
             icon: Icon(Icons.info_outline, color: colorScheme.onInverseSurface),
           );
+
           return;
         }
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('latestProject');
         Get.offAll(() => ProjectInputScreen());
       },
       child: Scaffold(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:promoten/services/platfrom_share_service.dart';
 
 class PlatformCard extends StatelessWidget {
   final String platform;
@@ -238,12 +239,12 @@ class PlatformCard extends StatelessWidget {
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: () {
-                      // TODO: Implement share functionality
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Share feature coming soon!"),
-                        ),
-                      );
+                      launchPlatformShare( platform: platform, content: content);
+                      // ScaffoldMessenger.of(context).showSnackBar(
+                      //   const SnackBar(
+                      //     content: Text("Share feature coming soon!"),
+                      //   ),
+                      // );
                     },
                     icon: const Icon(Icons.share, size: 16),
                     label: const Text('Share'),
